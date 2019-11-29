@@ -1,1 +1,0 @@
-  Amazon FreeRTOS data sheet
