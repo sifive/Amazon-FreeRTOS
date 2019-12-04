@@ -90,11 +90,6 @@
 			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_tests/config_files/aws_iot_network_config.h</locationURI>
 		</link>
 		<link>
-			<name>config_files/aws_mqtt_agent_config.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_tests/config_files/aws_mqtt_agent_config.h</locationURI>
-		</link>
-		<link>
 			<name>config_files/aws_mqtt_config.h</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_tests/config_files/aws_mqtt_config.h</locationURI>
@@ -640,19 +635,9 @@
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/LICENSE</locationURI>
 		</link>
 		<link>
-			<name>libraries/3rdparty/tinycbor/assert_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/assert_p.h</locationURI>
-		</link>
-		<link>
 			<name>libraries/3rdparty/tinycbor/cbor.h</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/cbor.h</locationURI>
-		</link>
-		<link>
-			<name>libraries/3rdparty/tinycbor/cborconstants_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/cborconstants_p.h</locationURI>
 		</link>
 		<link>
 			<name>libraries/3rdparty/tinycbor/cborencoder.c</name>
@@ -688,16 +673,6 @@
 			<name>libraries/3rdparty/tinycbor/compilersupport_p.h</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/compilersupport_p.h</locationURI>
-		</link>
-		<link>
-			<name>libraries/3rdparty/tinycbor/extract_number_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/extract_number_p.h</locationURI>
-		</link>
-		<link>
-			<name>libraries/3rdparty/tinycbor/math_support_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/math_support_p.h</locationURI>
 		</link>
 		<link>
 			<name>libraries/3rdparty/unity/.gitattributes</name>
@@ -1268,11 +1243,6 @@
 			<name>libraries/3rdparty/unity/src/unity_internals.h</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/unity/src/unity_internals.h</locationURI>
-		</link>
-		<link>
-			<name>libraries/abstractions/pkcs11/include/iot_pkcs11.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/abstractions/pkcs11/include/iot_pkcs11.h</locationURI>
 		</link>
 		<link>
 			<name>libraries/abstractions/pkcs11/mbedtls/iot_pkcs11_mbedtls.c</name>

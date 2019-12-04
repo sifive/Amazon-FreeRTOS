@@ -121,9 +121,9 @@ espr_t esp_callback_func(esp_evt_t *cb) {
     }
 
     case ESP_EVT_WIFI_DISCONNECTED: {
-    	configPRINTF(("Wifi Disconnected\r\n"));
 		if (xDisconnectWant != pdTRUE)
     	{
+			configPRINTF(("Wifi Disconnected\r\n"));
     		xDisconnectAlert = pdTRUE;
 		}
     	xDisconnectWant = pdFALSE;

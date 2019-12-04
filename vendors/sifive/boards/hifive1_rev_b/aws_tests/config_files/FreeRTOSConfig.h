@@ -143,7 +143,6 @@ extern void vLoggingPrint( const char * pcMessage );
 
 /* Map the logging task's printf to the board specific output function. */
 #include <stdio.h>
-//#define configPRINT_STRING( X )    printf( X );
 #define configPRINT_STRING( X )    _write(STDOUT_FILENO, X, strlen(X));
 
 /* Sets the length of the buffers into which logging messages are written - so

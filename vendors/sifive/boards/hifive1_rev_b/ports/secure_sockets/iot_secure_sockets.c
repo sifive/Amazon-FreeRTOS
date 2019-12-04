@@ -112,6 +112,8 @@ typedef struct SSocketContext_t
 	esp_pbuf_p pbuf;
 	BaseType_t available;
 	size_t offset;
+	SemaphoreHandle_t xUcInUse;
+	SemaphoreHandle_t xRecieveUcInUse;
 } SSocketContext_t;
 
 /**
@@ -122,45 +124,29 @@ typedef struct SSocketContext_t
  */
 static SSocketContext_t xSockets[ESP_CFG_MAX_CONNS];
 
-/**
- * @brief The global mutex to ensure that only one operation is accessing the
- * SSocketContext.ucInUse flag at one time.
- */
-static SemaphoreHandle_t xUcInUse = NULL;
-
-static SemaphoreHandle_t xUcRecieveInUse = NULL;
-
-static SemaphoreHandle_t xTLSConnect = NULL;
 static const TickType_t xMaxSemaphoreBlockTime = pdMS_TO_TICKS( 60000UL );
+
+static BaseType_t rootCAwritten = 0;
 
 static uint32_t prvGetFreeSocket( void )
 {
 	uint32_t ulSocketNumber;
 
-	/* Obtain the socketInUse mutex. */
-	if (xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
+	taskENTER_CRITICAL();
+	/* Iterate over xSockets array to see if any free socket
+	* is available. */
+	for (ulSocketNumber = 0 ; ulSocketNumber < ( uint32_t ) ESP_CFG_MAX_CONNS ; ulSocketNumber++)
 	{
-		/* Iterate over xSockets array to see if any free socket
-		* is available. */
-		for (ulSocketNumber = 0 ; ulSocketNumber < ( uint32_t ) ESP_CFG_MAX_CONNS ; ulSocketNumber++)
+		if (xSockets[ ulSocketNumber ].ucInUse == 0U)
 		{
-			if (xSockets[ ulSocketNumber ].ucInUse == 0U)
-			{
-				/* Mark the socket as "in-use". */
-				xSockets[ ulSocketNumber ].ucInUse = 1;
+			/* Mark the socket as "in-use". */
+			xSockets[ ulSocketNumber ].ucInUse = 1;
 
-				/* We have found a free socket, so stop. */
-				break;
-			}
+			/* We have found a free socket, so stop. */
+			break;
 		}
-
-		/* Give back the socketInUse mutex. */
-		xSemaphoreGive(xUcInUse);
 	}
-	else
-	{
-		ulSocketNumber = ESP_CFG_MAX_CONNS;
-	}
+	taskEXIT_CRITICAL();
 
 	/* Did we find a free socket? */
 	if (ulSocketNumber == (uint32_t) ESP_CFG_MAX_CONNS)
@@ -180,17 +166,14 @@ static BaseType_t prvReturnSocket( uint32_t ulSocketNumber )
 
 	/* Since multiple tasks can be accessing this simultaneously,
 	* this has to be in critical section. */
-	/* Obtain the socketInUse mutex. */
-	if (xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
-	{
-		/* Mark the socket as free. */
-		xSockets[ ulSocketNumber ].ucInUse = 0;
+	taskENTER_CRITICAL();
 
-		xResult = pdTRUE;
+	/* Mark the socket as free. */
+	xSockets[ ulSocketNumber ].ucInUse = 0;
 
-		/* Give back the socketInUse mutex. */
-		xSemaphoreGive(xUcInUse);
-	}
+	xResult = pdTRUE;
+
+	taskEXIT_CRITICAL();
 
 	return xResult;
 }
@@ -204,19 +187,16 @@ static BaseType_t prvIsValidSocket( uint32_t ulSocketNumber )
 	/* Check that the provided socket number is within the valid index range. */
 	if (ulSocketNumber < ( uint32_t ) ESP_CFG_MAX_CONNS )
 	{
-		/* Obtain the socketInUse mutex. */
-		if( xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime ) == pdTRUE )
-		{
-			/* Check that this socket is in use. */
-			if (xSockets[ ulSocketNumber ].ucInUse == 1U )
-			{
-				/* This is a valid socket number. */
-				xValid = pdTRUE;
-			}
+		taskENTER_CRITICAL();
 
-			/* Give back the socketInUse mutex. */
-			xSemaphoreGive(xUcInUse);
+		/* Check that this socket is in use. */
+		if (xSockets[ ulSocketNumber ].ucInUse == 1U )
+		{
+			/* This is a valid socket number. */
+			xValid = pdTRUE;
 		}
+
+		taskEXIT_CRITICAL();
 	}
 
 	return xValid;
@@ -227,7 +207,7 @@ static BaseType_t prvNetworkSend( void * pvContext,
                                   const unsigned char * pucData,
                                   size_t xDataLength )
 {
-	BaseType_t lRetVal = SOCKETS_SOCKET_ERROR;
+	BaseType_t lRetVal = 0;
 	SSocketContext_t* pxContext = NULL;
 	uint32_t ulSocketNumber = ( uint32_t ) pvContext; 		/*lint !e923 cast is necessary for port. */
 
@@ -252,8 +232,6 @@ static BaseType_t prvNetworkSend( void * pvContext,
 		}
 	}
 
-//	configPRINTF(("Send %d = %d \r\n", ulSocketNumber, lRetVal));
-
 	vTaskDelay(1);
 
 	return lRetVal;
@@ -265,7 +243,7 @@ static BaseType_t prvNetworkRecv( void * pvContext,
                                   unsigned char * pucReceiveBuffer,
                                   size_t xReceiveLength )
 {
-	BaseType_t lRetVal = SOCKETS_SOCKET_ERROR;
+	BaseType_t lRetVal = 0;
 	SSocketContext_t* pxContext = NULL;
 	uint32_t ulSocketNumber = ( uint32_t ) pvContext; 		/*lint !e923 cast is necessary for port. */
 
@@ -282,10 +260,6 @@ static BaseType_t prvNetworkRecv( void * pvContext,
 				{
 					esp_pbuf_free(pxContext->pbuf);    /* Free the memory after usage */
 					pxContext->pbuf = NULL;
-				}
-				if (res == espTIMEOUT)
-				{
-					lRetVal = SOCKETS_EWOULDBLOCK;
 				}
 			}
 			else if ((res == espOK) && (pxContext->pbuf != NULL))
@@ -314,7 +288,7 @@ static BaseType_t prvNetworkRecv( void * pvContext,
 		}
 	}
 
-//	configPRINTF(("Recv %d = %d \r\n",ulSocketNumber, lRetVal));
+	vTaskDelay(1);
 
 	return lRetVal;
 }
@@ -333,16 +307,18 @@ Socket_t SOCKETS_Socket( int32_t lDomain,
 
 	ulSocketNumber = prvGetFreeSocket();
 
-	if (xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
+	/* If we get a free socket, set its attributes. */
+	if(ulSocketNumber != (uint32_t)SOCKETS_INVALID_SOCKET)
 	{
-		if((xDisconnectAlert == pdTRUE) && (xIsWiFiInitialized == pdTRUE))
+		/* Obtain the socketInUse mutex. */
+		if (xSemaphoreTake( xSockets[ ulSocketNumber ].xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
 		{
-			xDisconnectAlert = pdFALSE;
-			WIFI_ConnectAP(&pxLastNetworkParams);
-		}
-		/* If we get a free socket, set its attributes. */
-		if(ulSocketNumber != (uint32_t)SOCKETS_INVALID_SOCKET)
-		{
+			if((xDisconnectAlert == pdTRUE) && (xIsWiFiInitialized == pdTRUE))
+			{
+				xDisconnectAlert = pdFALSE;
+				WIFI_ConnectAP(&pxLastNetworkParams);
+			}
+
 			xSockets[ ulSocketNumber ].xSocketType = ESP_NETCONN_TYPE_TCP;
 			xSockets[ ulSocketNumber ].ulFlags = 0;
 			xSockets[ ulSocketNumber ].pcDestination = NULL;
@@ -365,16 +341,15 @@ Socket_t SOCKETS_Socket( int32_t lDomain,
 			{
 				ulSocketNumber = (uint32_t)SOCKETS_INVALID_SOCKET;
 			}
+			/* Give back the socketInUse mutex. */
+			xSemaphoreGive(xSockets[ ulSocketNumber ].xUcInUse);
 		}
-		/* Give back the socketInUse mutex. */
-		xSemaphoreGive(xUcInUse);
-	}
-	else
-	{
-		ulSocketNumber = (uint32_t)SOCKETS_INVALID_SOCKET;
+		else
+		{
+			ulSocketNumber = (uint32_t)SOCKETS_INVALID_SOCKET;
+		}
 	}
 
-	/* If we fail to get a free socket, we return SOCKETS_INVALID_SOCKET. */
 	return (Socket_t)ulSocketNumber;
 }
 /*-----------------------------------------------------------*/
@@ -397,19 +372,19 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
     int32_t lRetVal = SOCKETS_ERROR_NONE;
 
     /* Ensure that a valid socket was passed. */
-    if( prvIsValidSocket( ulSocketNumber ) == pdTRUE )
+    if(( prvIsValidSocket( ulSocketNumber ) == pdTRUE )  && (pxAddress != NULL) && (pxAddress->usPort != 0))
     {
-		/* Try to acquire the semaphore. */
-    	if (xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
-		{
-    		if((xDisconnectAlert == pdTRUE) && (xIsWiFiInitialized == pdTRUE))
-    		{
-    			xDisconnectAlert = pdFALSE;
-    			WIFI_ConnectAP(&pxLastNetworkParams);
-    		}
-			/* Shortcut for easy access. */
-			pxSecureSocket = &( xSockets[ ulSocketNumber ] );
+		/* Shortcut for easy access. */
+		pxSecureSocket = &( xSockets[ ulSocketNumber ] );
 
+		/* Obtain the socketInUse mutex. */
+		if (xSemaphoreTake( pxSecureSocket->xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
+		{
+			if((xDisconnectAlert == pdTRUE) && (xIsWiFiInitialized == pdTRUE))
+			{
+				xDisconnectAlert = pdFALSE;
+				WIFI_ConnectAP(&pxLastNetworkParams);
+			}
 			/* Check that the socket is not already connected. */
 			if( ( pxSecureSocket->ulFlags & securesocketsSOCKET_IS_CONNECTED ) != 0UL )
 			{
@@ -444,21 +419,26 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
 						if (pxSecureSocket->pcServerCertificate == NULL)
 						{
 							pemBuffer = (uint8_t *)allocPkiBinImg((unsigned char*)tlsSTARFIELD_ROOT_CERTIFICATE_PEM, tlsSTARFIELD_ROOT_CERTIFICATE_LENGTH, PKI_TYPE_CA, &pemLength);
+							rootCAwritten++;
 						}
 						else
 						{
 							pemBuffer = (uint8_t *)allocPkiBinImg((unsigned char*)pxSecureSocket->pcServerCertificate, pxSecureSocket->ulServerCertificateLength, PKI_TYPE_CA, &pemLength);
+							rootCAwritten = 0;
 						}
 
-						if( esp_StoreCert(pemBuffer, PKI_TYPE_CA, pemLength) == espOK )
+						if (rootCAwritten < 2)
 						{
-							/* Certificate stored successfully. */
-							lRetVal = SOCKETS_ERROR_NONE;
-						}
-						else
-						{
-							/* Failed to store certificate. */
-							lRetVal = SOCKETS_SOCKET_ERROR;
+							if( esp_StoreCert(pemBuffer, PKI_TYPE_CA, pemLength) == espOK )
+							{
+								/* Certificate stored successfully. */
+								lRetVal = SOCKETS_ERROR_NONE;
+							}
+							else
+							{
+								/* Failed to store certificate. */
+								lRetVal = SOCKETS_SOCKET_ERROR;
+							}
 						}
 
 						vPortFree( pemBuffer );
@@ -500,7 +480,7 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
 						{
 							conn_status = esp_conn_set_ssl_conf((ESP_CFG_MAX_CONNS - ulSocketNumber - 1), 3, 0, 0, 1);
 						}
-#endif /* USE_OFFLOAD_SSL */
+	#endif /* USE_OFFLOAD_SSL */
 						if (conn_status == espOK)
 						{
 							conn_status = esp_netconn_connect((esp_netconn_p)(pxSecureSocket->xSocket), host, SOCKETS_ntohs(pxAddress->usPort));
@@ -528,14 +508,9 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
 				/* Could not acquire semaphore. */
 				lRetVal = SOCKETS_EISCONN;
 			}
-
 			/* Give back the socketInUse mutex. */
-			xSemaphoreGive(xUcInUse);
-    	}
-    	else
-    	{
-            lRetVal = SOCKETS_SOCKET_ERROR;
-    	}
+			xSemaphoreGive(pxSecureSocket->xUcInUse);
+		}
     }
     else
     {
@@ -597,7 +572,7 @@ int32_t SOCKETS_Recv( Socket_t xSocket,
 {
 	uint32_t ulSocketNumber = (uint32_t)xSocket;
 	SSocketContext_t * pxContext;
-    int32_t lReceivedBytes = SOCKETS_SOCKET_ERROR;
+    int32_t lReceivedBytes = 0;
 
     /* Remove warning about unused parameters. */
     ( void ) ulFlags;
@@ -606,10 +581,11 @@ int32_t SOCKETS_Recv( Socket_t xSocket,
 	* passed buffer is not NULL. */
 	if ((prvIsValidSocket(ulSocketNumber) == pdTRUE) && (pvBuffer != NULL))
 	{
-		if (xSemaphoreTake( xUcRecieveInUse, xMaxSemaphoreBlockTime) == pdTRUE)
-		{
-			pxContext = &( xSockets[ulSocketNumber] );
+		pxContext = &( xSockets[ulSocketNumber] );
 
+		/* Obtain the socketInUse mutex. */
+		if (xSemaphoreTake( pxContext->xRecieveUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
+		{
 			if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) != 0UL)
 			{
 				/* Check that receive is allowed on the socket. */
@@ -650,7 +626,7 @@ int32_t SOCKETS_Recv( Socket_t xSocket,
 				lReceivedBytes = SOCKETS_ECLOSED;
 			}
 			/* Give back the socketInUse mutex. */
-			xSemaphoreGive(xUcRecieveInUse);
+			xSemaphoreGive(pxContext->xRecieveUcInUse);
 		}
 	}
 	else
@@ -669,17 +645,18 @@ int32_t SOCKETS_Send( Socket_t xSocket,
 {
 	uint32_t ulSocketNumber = (uint32_t)xSocket;
 	SSocketContext_t * pxContext;
-    int32_t lSentBytes = SOCKETS_SOCKET_ERROR;
+    int32_t lSentBytes = 0;
 
 	/* Remove warning about unused parameters. */
 	(void)ulFlags;
 
 	if ((prvIsValidSocket(ulSocketNumber) == pdTRUE) && (pvBuffer != NULL))
 	{
-		if (xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
-		{
-			pxContext = &( xSockets[ulSocketNumber] );
+		pxContext = &( xSockets[ulSocketNumber] );
 
+		/* Obtain the socketInUse mutex. */
+		if (xSemaphoreTake( pxContext->xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
+		{
 			if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) != 0UL)
 			{
 				/* Check that send is allowed on the socket. */
@@ -720,7 +697,7 @@ int32_t SOCKETS_Send( Socket_t xSocket,
 				lSentBytes =  SOCKETS_ECLOSED;
 			}
 			/* Give back the socketInUse mutex. */
-			xSemaphoreGive(xUcInUse);
+			xSemaphoreGive(pxContext->xUcInUse);
 		}
 	}
 	else
@@ -744,37 +721,43 @@ int32_t SOCKETS_Shutdown( Socket_t xSocket,
 	{
 		pxContext = &( xSockets[ulSocketNumber] );
 
-		switch( ulHow )
+		/* Obtain the socketInUse mutex. */
+		if (xSemaphoreTake( pxContext->xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
 		{
-			case SOCKETS_SHUT_RD:
-				/* Further receive calls on this socket should return error. */
-				pxContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
+			switch( ulHow )
+			{
+				case SOCKETS_SHUT_RD:
+					/* Further receive calls on this socket should return error. */
+					pxContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
 
-                /* Return success to the user. */
-                lRetVal = SOCKETS_ERROR_NONE;
-                break;
+					/* Return success to the user. */
+					lRetVal = SOCKETS_ERROR_NONE;
+					break;
 
-			case SOCKETS_SHUT_WR:
-				/* Further send calls on this socket should return error. */
-				pxContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
+				case SOCKETS_SHUT_WR:
+					/* Further send calls on this socket should return error. */
+					pxContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
 
-                /* Return success to the user. */
-                lRetVal = SOCKETS_ERROR_NONE;
-                break;
+					/* Return success to the user. */
+					lRetVal = SOCKETS_ERROR_NONE;
+					break;
 
-			case SOCKETS_SHUT_RDWR:
-				/* Further send or receive calls on this socket should return error. */
-				pxContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
-				pxContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
+				case SOCKETS_SHUT_RDWR:
+					/* Further send or receive calls on this socket should return error. */
+					pxContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
+					pxContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
 
-                /* Return success to the user. */
-                lRetVal = SOCKETS_ERROR_NONE;
-                break;
+					/* Return success to the user. */
+					lRetVal = SOCKETS_ERROR_NONE;
+					break;
 
-			default:
-                /* An invalid value was passed for ulHow. */
-                lRetVal = SOCKETS_EINVAL;
-                break;
+				default:
+					/* An invalid value was passed for ulHow. */
+					lRetVal = SOCKETS_EINVAL;
+					break;
+			}
+			/* Give back the socketInUse mutex. */
+			xSemaphoreGive(pxContext->xUcInUse);
 		}
 	}
 	else
@@ -797,70 +780,66 @@ int32_t SOCKETS_Close( Socket_t xSocket )
 	{
 		pxContext = &( xSockets[ulSocketNumber] );
 
-		pxContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
-		pxContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
-
-		/* Clean-up destination string. */
-		if (pxContext->pcDestination != NULL)
+		/* Obtain the socketInUse mutex. */
+		if (xSemaphoreTake( pxContext->xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
 		{
-			vPortFree(pxContext->pcDestination);
-		}
+			pxContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
+			pxContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
 
-		/* Clean-up server certificate. */
-		if (pxContext->pcServerCertificate != NULL)
-		{
-			vPortFree(pxContext->pcServerCertificate);
-		}
-
-		/* Clean-up application protocol array. */
-		if (pxContext->ppcAlpnProtocols != NULL)
-		{
-			for (uint32_t ulProtocol = 0; ulProtocol < pxContext->ulAlpnProtocolsCount; ulProtocol++)
+			/* Clean-up destination string. */
+			if (pxContext->pcDestination != NULL)
 			{
-				if (pxContext->ppcAlpnProtocols[ ulProtocol ] != NULL)
-				{
-					vPortFree( pxContext->ppcAlpnProtocols[ ulProtocol ] );
-				}
+				vPortFree(pxContext->pcDestination);
 			}
 
-			vPortFree(pxContext->ppcAlpnProtocols);
-		}
-
-		#ifndef USE_OFFLOAD_SSL
-		/* Clean-up TLS context. */
-		if ((pxContext->ulFlags & securesocketsSOCKET_SECURE_FLAG) != 0UL)
-		{
-			TLS_Cleanup(pxContext->pvTLSContext);
-		}
-		#endif /* USE_OFFLOAD_SSL */
-
-		if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) != 0UL)
-		{
-			if (xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
+			/* Clean-up server certificate. */
+			if (pxContext->pcServerCertificate != NULL)
 			{
-				esp_netconn_close(pxContext->xSocket);
-				esp_netconn_delete(pxContext->xSocket);
+				vPortFree(pxContext->pcServerCertificate);
+			}
 
+			/* Clean-up application protocol array. */
+			if (pxContext->ppcAlpnProtocols != NULL)
+			{
+				for (uint32_t ulProtocol = 0; ulProtocol < pxContext->ulAlpnProtocolsCount; ulProtocol++)
+				{
+					if (pxContext->ppcAlpnProtocols[ ulProtocol ] != NULL)
+					{
+						vPortFree( pxContext->ppcAlpnProtocols[ ulProtocol ] );
+					}
+				}
+
+				vPortFree(pxContext->ppcAlpnProtocols);
+			}
+
+			#ifndef USE_OFFLOAD_SSL
+			/* Clean-up TLS context. */
+			if ((pxContext->ulFlags & securesocketsSOCKET_SECURE_FLAG) != 0UL)
+			{
+				TLS_Cleanup(pxContext->pvTLSContext);
+			}
+			#endif /* USE_OFFLOAD_SSL */
+
+			if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) != 0UL)
+			{
 				pxContext->ulFlags &= ~securesocketsSOCKET_IS_CONNECTED;
 				lRetVal = SOCKETS_ERROR_NONE;
-
-				/* Give back the socketInUse mutex. */
-				xSemaphoreGive(xUcInUse);
 			}
 			else
 			{
+				lRetVal = SOCKETS_ERROR_NONE;
+			}
+
+			esp_netconn_close(pxContext->xSocket);
+			esp_netconn_delete(pxContext->xSocket);
+
+			/* Return the socket back to the free socket pool. */
+			if (prvReturnSocket(ulSocketNumber) != pdTRUE)
+			{
 				lRetVal = SOCKETS_SOCKET_ERROR;
 			}
-		}
-		else
-		{
-			lRetVal = SOCKETS_ERROR_NONE;
-		}
-
-		/* Return the socket back to the free socket pool. */
-		if (prvReturnSocket(ulSocketNumber) != pdTRUE)
-		{
-			lRetVal = SOCKETS_SOCKET_ERROR;
+			/* Give back the socketInUse mutex. */
+			xSemaphoreGive(pxContext->xUcInUse);
 		}
 	}
 	else
@@ -891,166 +870,172 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
 	{
 		pxContext = &( xSockets[ulSocketNumber] );
 
-		switch( lOptionName )
+		/* Obtain the socketInUse mutex. */
+		if (xSemaphoreTake( pxContext->xUcInUse, xMaxSemaphoreBlockTime) == pdTRUE)
 		{
-			case SOCKETS_SO_SERVER_NAME_INDICATION:
-				if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
-				{
-					/* Non-NULL destination string indicates that SNI extension should
-					* be used during TLS negotiation. */
-					pxContext->pcDestination = ( char * ) pvPortMalloc( 1U + xOptionLength );
-
-					if (pxContext->pcDestination == NULL)
+			switch( lOptionName )
+			{
+				case SOCKETS_SO_SERVER_NAME_INDICATION:
+					if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
 					{
-						lRetCode = SOCKETS_ENOMEM;
-					}
-					else
-					{
-						if (pvOptionValue != NULL)
-						{
-							memcpy(pxContext->pcDestination, pvOptionValue, xOptionLength );
-							pxContext->pcDestination[ xOptionLength ] = '\0';
-						}
-						else
-						{
-							lRetCode = SOCKETS_EINVAL;
-						}
-					}
-				}
-				else
-				{
-					lRetCode = SOCKETS_EISCONN;
-				}
+						/* Non-NULL destination string indicates that SNI extension should
+						* be used during TLS negotiation. */
+						pxContext->pcDestination = ( char * ) pvPortMalloc( 1U + xOptionLength );
 
-			break;
-
-			case SOCKETS_SO_TRUSTED_SERVER_CERTIFICATE:
-				if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
-				{
-					/* Non-NULL server certificate field indicates that the default trust
-					* list should not be used. */
-					pxContext->pcServerCertificate = ( char * ) pvPortMalloc( xOptionLength );
-
-					if (pxContext->pcServerCertificate == NULL)
-					{
-						lRetCode = SOCKETS_ENOMEM;
-					}
-					else
-					{
-						if (pvOptionValue != NULL)
-						{
-							memcpy( pxContext->pcServerCertificate, pvOptionValue, xOptionLength );
-							pxContext->ulServerCertificateLength = xOptionLength;
-						}
-						else
-						{
-							lRetCode = SOCKETS_EINVAL;
-						}
-					}
-				}
-				else
-				{
-					lRetCode = SOCKETS_EISCONN;
-				}
-
-			break;
-
-			case SOCKETS_SO_REQUIRE_TLS:
-				if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
-				{
-					pxContext->ulFlags |= securesocketsSOCKET_SECURE_FLAG;
-#ifdef USE_OFFLOAD_SSL
-					/* Set the socket type to SSL to use offload SSL. */
-					pxContext->xSocketType = ESP_NETCONN_TYPE_SSL;
-					if (pxContext->xSocket)
-					{
-						esp_set_type(pxContext->xSocket, pxContext->xSocketType);
-					}
-					else
-					{
-						lRetCode = SOCKETS_SOCKET_ERROR;
-					}
-#endif /* USE_OFFLOAD_SSL */
-				}
-				else
-				{
-					/* Do not set the ALPN option if the socket is already connected. */
-					lRetCode = SOCKETS_EISCONN;
-				}
-			break;
-
-			case SOCKETS_SO_ALPN_PROTOCOLS:
-				if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
-				{
-					/* Allocate a sufficiently long array of pointers. */
-					pxContext->ulAlpnProtocolsCount = 1 + xOptionLength;
-
-					if (NULL == (pxContext->ppcAlpnProtocols = (char **)pvPortMalloc(pxContext->ulAlpnProtocolsCount * sizeof(char *))))
-					{
-						lRetCode = SOCKETS_ENOMEM;
-					}
-					else
-					{
-						pxContext->ppcAlpnProtocols[pxContext->ulAlpnProtocolsCount - 1 ] = NULL;
-					}
-
-					/* Copy each protocol string. */
-					for (uint32_t ulProtocol = 0; (ulProtocol < pxContext->ulAlpnProtocolsCount - 1) && (lRetCode == pdFREERTOS_ERRNO_NONE); ulProtocol++)
-					{
-						char ** ppcAlpnIn = ( char ** ) pvOptionValue;
-						size_t xLength = strlen(ppcAlpnIn[ ulProtocol ]);
-
-						if ((pxContext->ppcAlpnProtocols[ ulProtocol ] = (char *)pvPortMalloc(1 + xLength)) == NULL)
+						if (pxContext->pcDestination == NULL)
 						{
 							lRetCode = SOCKETS_ENOMEM;
 						}
 						else
 						{
-							memcpy( pxContext->ppcAlpnProtocols[ ulProtocol ], ppcAlpnIn[ ulProtocol ], xLength );
-							pxContext->ppcAlpnProtocols[ ulProtocol ][ xLength ] = '\0';
+							if (pvOptionValue != NULL)
+							{
+								memcpy(pxContext->pcDestination, pvOptionValue, xOptionLength );
+								pxContext->pcDestination[ xOptionLength ] = '\0';
+							}
+							else
+							{
+								lRetCode = SOCKETS_EINVAL;
+							}
 						}
 					}
-				}
-				else
-				{
-					/* Do not set the ALPN option if the socket is already connected. */
-					lRetCode = SOCKETS_EISCONN;
-				}
+					else
+					{
+						lRetCode = SOCKETS_EISCONN;
+					}
 
-			break;
+				break;
 
-			case SOCKETS_SO_SNDTIMEO:
-			break;
+				case SOCKETS_SO_TRUSTED_SERVER_CERTIFICATE:
+					if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
+					{
+						/* Non-NULL server certificate field indicates that the default trust
+						* list should not be used. */
+						pxContext->pcServerCertificate = ( char * ) pvPortMalloc( xOptionLength );
 
-			case SOCKETS_SO_RCVTIMEO:
-				if (pvOptionValue != NULL)
-				{
-					xTimeout = *( ( const TickType_t * ) pvOptionValue ); /*lint !e9087 pvOptionValue passed should be of TickType_t. */
-					esp_netconn_set_receive_timeout(pxContext->xSocket, xTimeout);
-				}
-				else
-				{
+						if (pxContext->pcServerCertificate == NULL)
+						{
+							lRetCode = SOCKETS_ENOMEM;
+						}
+						else
+						{
+							if (pvOptionValue != NULL)
+							{
+								memcpy( pxContext->pcServerCertificate, pvOptionValue, xOptionLength );
+								pxContext->ulServerCertificateLength = xOptionLength;
+							}
+							else
+							{
+								lRetCode = SOCKETS_EINVAL;
+							}
+						}
+					}
+					else
+					{
+						lRetCode = SOCKETS_EISCONN;
+					}
+
+				break;
+
+				case SOCKETS_SO_REQUIRE_TLS:
+					if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
+					{
+						pxContext->ulFlags |= securesocketsSOCKET_SECURE_FLAG;
+	#ifdef USE_OFFLOAD_SSL
+						/* Set the socket type to SSL to use offload SSL. */
+						pxContext->xSocketType = ESP_NETCONN_TYPE_SSL;
+						if (pxContext->xSocket)
+						{
+							esp_set_type(pxContext->xSocket, pxContext->xSocketType);
+						}
+						else
+						{
+							lRetCode = SOCKETS_SOCKET_ERROR;
+						}
+	#endif /* USE_OFFLOAD_SSL */
+					}
+					else
+					{
+						/* Do not set the ALPN option if the socket is already connected. */
+						lRetCode = SOCKETS_EISCONN;
+					}
+				break;
+
+				case SOCKETS_SO_ALPN_PROTOCOLS:
+					if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED) == 0)
+					{
+						/* Allocate a sufficiently long array of pointers. */
+						pxContext->ulAlpnProtocolsCount = 1 + xOptionLength;
+
+						if (NULL == (pxContext->ppcAlpnProtocols = (char **)pvPortMalloc(pxContext->ulAlpnProtocolsCount * sizeof(char *))))
+						{
+							lRetCode = SOCKETS_ENOMEM;
+						}
+						else
+						{
+							pxContext->ppcAlpnProtocols[pxContext->ulAlpnProtocolsCount - 1 ] = NULL;
+						}
+
+						/* Copy each protocol string. */
+						for (uint32_t ulProtocol = 0; (ulProtocol < pxContext->ulAlpnProtocolsCount - 1) && (lRetCode == pdFREERTOS_ERRNO_NONE); ulProtocol++)
+						{
+							char ** ppcAlpnIn = ( char ** ) pvOptionValue;
+							size_t xLength = strlen(ppcAlpnIn[ ulProtocol ]);
+
+							if ((pxContext->ppcAlpnProtocols[ ulProtocol ] = (char *)pvPortMalloc(1 + xLength)) == NULL)
+							{
+								lRetCode = SOCKETS_ENOMEM;
+							}
+							else
+							{
+								memcpy( pxContext->ppcAlpnProtocols[ ulProtocol ], ppcAlpnIn[ ulProtocol ], xLength );
+								pxContext->ppcAlpnProtocols[ ulProtocol ][ xLength ] = '\0';
+							}
+						}
+					}
+					else
+					{
+						/* Do not set the ALPN option if the socket is already connected. */
+						lRetCode = SOCKETS_EISCONN;
+					}
+
+				break;
+
+				case SOCKETS_SO_SNDTIMEO:
+				break;
+
+				case SOCKETS_SO_RCVTIMEO:
+					if (pvOptionValue != NULL)
+					{
+						xTimeout = *( ( const TickType_t * ) pvOptionValue ); /*lint !e9087 pvOptionValue passed should be of TickType_t. */
+						esp_netconn_set_receive_timeout(pxContext->xSocket, xTimeout);
+					}
+					else
+					{
+						lRetCode = SOCKETS_EINVAL;
+					}
+
+				break;
+
+				case SOCKETS_SO_NONBLOCK:
+					if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) != 0)
+					{
+						/* Set the timeouts to the smallest value possible.
+						* This isn't true nonblocking, but as close as we can get. */
+						esp_netconn_set_receive_timeout(pxContext->xSocket, 1);
+					}
+					else
+					{
+						lRetCode = SOCKETS_EISCONN;
+					}
+				break;
+
+				default:
 					lRetCode = SOCKETS_EINVAL;
-				}
-
-			break;
-
-			case SOCKETS_SO_NONBLOCK:
-				if ((pxContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) != 0)
-				{
-					/* Set the timeouts to the smallest value possible.
-					* This isn't true nonblocking, but as close as we can get. */
-					esp_netconn_set_receive_timeout(pxContext->xSocket, 1);
-				}
-				else
-				{
-					lRetCode = SOCKETS_EISCONN;
-				}
-			break;
-
-			default:
-				lRetCode = SOCKETS_EINVAL;
-			break;
+				break;
+			}
+			/* Give back the socketInUse mutex. */
+			xSemaphoreGive(pxContext->xUcInUse);
 		}
 	}
 	else
@@ -1087,28 +1072,17 @@ BaseType_t SOCKETS_Init( void )
 		xSockets[ ulIndex ].ucInUse = 0;
 	}
 
-	/* Create the global mutex which is used to ensure
-	* that only one socket is accessing the ucInUse bits in
-	* the socket array. */
-	xUcInUse = xSemaphoreCreateMutex();
-	if (xUcInUse == NULL)
+//	/* Create the global mutex which is used to ensure
+//	* that only one socket is accessing the ucInUse bits in
+//	* the socket array. */
+	for (ulIndex = 0; ulIndex <  (uint32_t)ESP_CFG_MAX_CONNS; ++ulIndex)
 	{
-		return pdFAIL;
-	}
-
-	xUcRecieveInUse = xSemaphoreCreateMutex();
-	if (xUcRecieveInUse == NULL)
-	{
-		return pdFAIL;
-	}
-
-	/* Create the global mutex which is used to ensure
-	* that only one socket is accessing the ucInUse bits in
-	* the socket array. */
-	xTLSConnect = xSemaphoreCreateMutex();
-	if (xTLSConnect == NULL)
-	{
-		return pdFAIL;
+		xSockets[ ulIndex ].xUcInUse = xSemaphoreCreateMutex();
+		xSockets[ ulIndex ].xRecieveUcInUse = xSemaphoreCreateMutex();
+		if (xSockets[ ulIndex ].xUcInUse == NULL || xSockets[ ulIndex ].xRecieveUcInUse == NULL)
+		{
+			return pdFAIL;
+		}
 	}
 
 	return pdPASS;

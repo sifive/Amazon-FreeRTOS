@@ -74,18 +74,18 @@
  */
 /** @{ */
 #define mqttconfigMQTT_TASK_STACK_DEPTH    ( 200 )
-#define mqttconfigMQTT_TASK_PRIORITY       ( configMAX_PRIORITIES - 3 )
+#define mqttconfigMQTT_TASK_PRIORITY       ( tskIDLE_PRIORITY + 1 )
 /** @} */
 
 /**
  * @brief Maximum number of MQTT clients that can exist simultaneously.
  */
-#define mqttconfigMAX_BROKERS                  ( 1 )
+#define mqttconfigMAX_BROKERS                  ( 2 )
 
 /**
  * @brief Maximum number of parallel operations per client.
  */
-#define mqttconfigMAX_PARALLEL_OPS             ( 2 )
+#define mqttconfigMAX_PARALLEL_OPS             ( 3 )
 
 /**
  * @brief Time in milliseconds after which the TCP send operation should timeout.

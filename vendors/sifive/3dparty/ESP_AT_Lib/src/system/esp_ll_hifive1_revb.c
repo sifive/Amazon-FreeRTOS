@@ -186,7 +186,7 @@ void prvUartHandlingThread( void * param )
     {
 		if (overFIFO)
 		{
-			configPRINT_STRING(("UART FIFO overflowed!\n"));
+//			configPRINT_STRING(("UART FIFO overflowed!\n"));
 			overFIFO = 0;
 		}
 

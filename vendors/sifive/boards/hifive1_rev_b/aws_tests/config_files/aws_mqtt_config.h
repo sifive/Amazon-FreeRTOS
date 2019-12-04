@@ -34,6 +34,11 @@
 #include <stdint.h>
 
 /**
+ * @brief Define assert for test project.
+ */
+#define mqttconfigASSERT( x )    if( ( x ) == 0 ) TEST_ABORT()
+
+/**
  * @brief Enable subscription management.
  *
  * This gives the user flexibility of registering a callback per topic.
@@ -44,7 +49,7 @@
  * @brief Maximum length of the topic which can be stored in subscription
  * manager.
  */
-#define mqttconfigSUBSCRIPTION_MANAGER_MAX_TOPIC_LENGTH     ( 64 )
+#define mqttconfigSUBSCRIPTION_MANAGER_MAX_TOPIC_LENGTH     ( 96 )
 
 /**
  * @brief Maximum number of subscriptions which can be stored in subscription

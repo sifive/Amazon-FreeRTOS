@@ -15,7 +15,7 @@ advance_pointer(cbuf_handle_t cbuf)
 
 	if(cbuf->full)
     {
-		configPRINT_STRING(("Circular buffer overflowed!\n"));
+//		configPRINT_STRING(("Circular buffer overflowed!\n"));
         cbuf->tail = (cbuf->tail + 1) % cbuf->max;
     }
 

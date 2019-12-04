@@ -11,5 +11,5 @@ echo h >> JLinkCommandFile.jlink
 echo r >> JLinkCommandFile.jlink
 echo g >> JLinkCommandFile.jlink
 echo exit >> JLinkCommandFile.jlink
-JLink -device FE310 -if JTAG -jtagconf -1,-1 -speed 4000 -autoconnect 1 -CommanderScript JLinkCommandFile.jlink
+"C:\Program Files (x86)\SEGGER\JLink\JLink" -device FE310 -if JTAG -jtagconf -1,-1 -speed 4000 -autoconnect 1 -CommanderScript JLinkCommandFile.jlink
 rm JLinkCommandFile.jlink

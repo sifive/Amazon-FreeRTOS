@@ -35,7 +35,7 @@
 #define ESP_CFG_PING                        1
 #define ESP_CFG_DNS                         1
 #define ESP_CFG_SNTP                        1
-#define TIMEZONE	                        -3
+#define TIMEZONE	                        3
 #define ESP_CFG_MAX_DETECTED_AP             10
 #define ESP_CFG_NETCONN_RECEIVE_TIMEOUT     1
 #define ESP_CFG_NETCONN_RECEIVE_QUEUE_LEN   16

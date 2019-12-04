@@ -60,9 +60,29 @@
 			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_demos/application_code/main.c</locationURI>
 		</link>
 		<link>
+			<name>application_code/reset.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_demos/application_code/reset.c</locationURI>
+		</link>
+		<link>
+			<name>application_code/reset.h</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_demos/application_code/reset.h</locationURI>
+		</link>
+		<link>
 			<name>application_code/sifive_code</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>application_code/wdg.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_demos/application_code/wdg.c</locationURI>
+		</link>
+		<link>
+			<name>application_code/wdg.h</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/vendors/sifive/boards/hifive1_rev_b/aws_demos/application_code/wdg.h</locationURI>
 		</link>
 		<link>
 			<name>config_files/FreeRTOSConfig.h</name>
@@ -740,19 +760,9 @@
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/LICENSE</locationURI>
 		</link>
 		<link>
-			<name>libraries/3rdparty/tinycbor/assert_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/assert_p.h</locationURI>
-		</link>
-		<link>
 			<name>libraries/3rdparty/tinycbor/cbor.h</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/cbor.h</locationURI>
-		</link>
-		<link>
-			<name>libraries/3rdparty/tinycbor/cborconstants_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/cborconstants_p.h</locationURI>
 		</link>
 		<link>
 			<name>libraries/3rdparty/tinycbor/cborencoder.c</name>
@@ -788,16 +798,6 @@
 			<name>libraries/3rdparty/tinycbor/compilersupport_p.h</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/compilersupport_p.h</locationURI>
-		</link>
-		<link>
-			<name>libraries/3rdparty/tinycbor/extract_number_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/extract_number_p.h</locationURI>
-		</link>
-		<link>
-			<name>libraries/3rdparty/tinycbor/math_support_p.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/tinycbor/math_support_p.h</locationURI>
 		</link>
 		<link>
 			<name>libraries/abstractions/pkcs11/include</name>
@@ -1583,11 +1583,6 @@
 			<name>libraries/3rdparty/mbedtls/utils/mbedtls_utils.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/libraries/3rdparty/mbedtls/utils/mbedtls_utils.c</locationURI>
-		</link>
-		<link>
-			<name>libraries/abstractions/pkcs11/include/iot_pkcs11.h</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/libraries/abstractions/pkcs11/include/iot_pkcs11.h</locationURI>
 		</link>
 		<link>
 			<name>libraries/abstractions/pkcs11/mbedtls/iot_pkcs11_mbedtls.c</name>
