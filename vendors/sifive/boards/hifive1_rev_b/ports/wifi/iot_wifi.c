@@ -1,8 +1,8 @@
 /*
- * Amazon FreeRTOS Wi-Fi for Infineon XMC4800 IoT Connectivity Kit V1.0.1
- * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * Amazon FreeRTOS Wi-Fi for SiFive Learn Inventor V1.0.0
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
- * Copyright (c) 2018, Infineon Technologies AG
+ * Copyright (c) 2019, SiFive, Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification,are permitted provided that the following conditions are met:
@@ -30,9 +30,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * To improve the quality of the software, users are encouraged to share
- * modifications, enhancements or bug fixes with Infineon Technologies AG
- * dave@infineon.com).
  */
 
 /**

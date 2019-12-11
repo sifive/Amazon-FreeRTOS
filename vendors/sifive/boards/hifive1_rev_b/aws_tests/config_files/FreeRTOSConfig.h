@@ -1,6 +1,6 @@
 /*
  * FreeRTOS Kernel V10.2.0
- * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -54,7 +54,7 @@
 #define configMAX_PRIORITIES                       ( 7 )
 #define configTICK_RATE_HZ                         ( 1000 )
 #define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 256 )
-#define configTOTAL_HEAP_SIZE                      ( ( size_t ) (42000) )
+#define configTOTAL_HEAP_SIZE                      ( ( size_t ) (43700) )
 #define configMAX_TASK_NAME_LEN                    ( 15 )
 #define configUSE_TRACE_FACILITY                   0
 #define configUSE_16_BIT_TICKS                     0

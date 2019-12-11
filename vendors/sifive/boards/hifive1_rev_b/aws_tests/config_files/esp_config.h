@@ -1,17 +1,19 @@
 /*
- * Copyright (C) 2018 Infineon Technologies AG. All rights reserved.
+ * Amazon FreeRTOS V1.4.8
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
- * Infineon Technologies AG (Infineon) is supplying this software for use with
- * Infineon's microcontrollers.
+ * Copyright (C) 2019 SiFive, Inc. All rights reserved.
+ *
+ * SiFive, Inc (SiFive) is supplying this software for use with
+ * SiFives's microcontrollers.
  * This file can be freely distributed within development tools that are
  * supporting such microcontrollers.
  *
  * THIS SOFTWARE IS PROVIDED "AS IS". NO WARRANTIES, WHETHER EXPRESS, IMPLIED
  * OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE.
- * INFINEON SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL,
+ * SiFive SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL,
  * OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
- *
  */
 
 #ifndef __ESP_CONFIG_H
