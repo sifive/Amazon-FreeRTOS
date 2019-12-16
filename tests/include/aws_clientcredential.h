@@ -32,22 +32,18 @@
  * @todo Set this to the fully-qualified DNS name of your MQTT broker.
  */
 #define clientcredentialMQTT_BROKER_ENDPOINT         ""
-//#define clientcredentialMQTT_BROKER_ENDPOINT         "a3t8vwpkw3sltg-ats.iot.eu-central-1.amazonaws.com"
-//#define clientcredentialMQTT_BROKER_ENDPOINT         "18.195.121.233"
 
 /*
  * @brief Host name.
  *
  * @todo Set this to the unique name of your IoT Thing.
  */
-//#define clientcredentialIOT_THING_NAME               "basicPubSub"
 #define clientcredentialIOT_THING_NAME               ""
 
 /*
  * @brief Port number the MQTT broker is using.
  */
 #define clientcredentialMQTT_BROKER_PORT             8883
-//#define clientcredentialMQTT_BROKER_PORT             1883
 
 /*
  * @brief Port number the Green Grass Discovery use for JSON retrieval from cloud is using.
@@ -59,15 +55,13 @@
  *
  * @todo If you are using Wi-Fi, set this to your network name.
  */
-#define clientcredentialWIFI_SSID                    "Keenetic-3986"
-//#define clientcredentialWIFI_SSID                    "psavyhin"
+#define clientcredentialWIFI_SSID                    ""
 
 /*
  * @brief Password needed to join Wi-Fi network.
  * @todo If you are using WPA, set this to your network password.
  */
-#define clientcredentialWIFI_PASSWORD                "4klikateam"
-//#define clientcredentialWIFI_PASSWORD                "Smart888"
+#define clientcredentialWIFI_PASSWORD                ""
 
 /*
  * @brief Wi-Fi network security type.
@@ -77,6 +71,6 @@
  * @note Possible values are eWiFiSecurityOpen, eWiFiSecurityWEP, eWiFiSecurityWPA,
  * eWiFiSecurityWPA2 (depending on the support of your device Wi-Fi radio).
  */
-#define clientcredentialWIFI_SECURITY eWiFiSecurityWPA2
+#define clientcredentialWIFI_SECURITY                eWiFiSecurityWPA2
 
 #endif /* ifndef __AWS_CLIENTCREDENTIAL__H__ */
