@@ -418,7 +418,16 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
 						uint32_t pemLength = 0;
 						if (pxSecureSocket->pcServerCertificate == NULL)
 						{
-							pemBuffer = (uint8_t *)allocPkiBinImg((unsigned char*)tlsSTARFIELD_ROOT_CERTIFICATE_PEM, tlsSTARFIELD_ROOT_CERTIFICATE_LENGTH, PKI_TYPE_CA, &pemLength);
+				            /* Use either Verisign or Starfield root CA,
+				             * depending on whether this is an ATS endpoint. */
+				            if( strstr( clientcredentialMQTT_BROKER_ENDPOINT, "-ats.iot" ) == NULL )
+				            {
+				                pemBuffer = (uint8_t *)allocPkiBinImg((unsigned char*)tlsVERISIGN_ROOT_CERTIFICATE_PEM, tlsVERISIGN_ROOT_CERTIFICATE_LENGTH, PKI_TYPE_CA, &pemLength);
+				            }
+				            else
+				            {
+				            	pemBuffer = (uint8_t *)allocPkiBinImg((unsigned char*)tlsSTARFIELD_ROOT_CERTIFICATE_PEM, tlsSTARFIELD_ROOT_CERTIFICATE_LENGTH, PKI_TYPE_CA, &pemLength);
+				            }
 							rootCAwritten++;
 						}
 						else

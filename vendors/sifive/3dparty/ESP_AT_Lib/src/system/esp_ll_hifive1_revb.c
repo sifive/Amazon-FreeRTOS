@@ -44,7 +44,7 @@
 #include "FreeRTOSConfig.h"
 
 #define espatTHREAD_DELAY_MS         1
-#define espatCIRCULAR_BUFFER_SIZE    1024
+#define espatCIRCULAR_BUFFER_SIZE    512
 #define espatTHREAD_PRIO    		(configMAX_PRIORITIES)
 #define espatTHREAD_STACK   		(360)
 

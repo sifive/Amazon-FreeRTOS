@@ -34,7 +34,7 @@
 
 /* Platform thread stack size and priority. */
 //#define IOT_THREAD_DEFAULT_STACK_SIZE    		6000
-#define IOT_THREAD_DEFAULT_STACK_SIZE    		( 1024 )
+#define IOT_THREAD_DEFAULT_STACK_SIZE    		( 512 )
 #define IOT_THREAD_DEFAULT_PRIORITY      		( configMAX_PRIORITIES-2 )
 
 

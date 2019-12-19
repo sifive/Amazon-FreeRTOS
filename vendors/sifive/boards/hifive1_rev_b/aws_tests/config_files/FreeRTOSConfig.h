@@ -54,7 +54,7 @@
 #define configMAX_PRIORITIES                       ( 7 )
 #define configTICK_RATE_HZ                         ( 1000 )
 #define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 256 )
-#define configTOTAL_HEAP_SIZE                      ( ( size_t ) (43700) )
+#define configTOTAL_HEAP_SIZE                      ( ( size_t ) (44000) )
 #define configMAX_TASK_NAME_LEN                    ( 15 )
 #define configUSE_TRACE_FACILITY                   0
 #define configUSE_16_BIT_TICKS                     0
@@ -69,7 +69,7 @@
 
 /* Hook function related definitions. */
 #define configUSE_TICK_HOOK                        0
-#define configUSE_IDLE_HOOK                        1
+#define configUSE_IDLE_HOOK                        0
 #define configUSE_MALLOC_FAILED_HOOK               1
 #define configCHECK_FOR_STACK_OVERFLOW             2      /* Not applicable to the Win32 port. */
 
@@ -77,7 +77,7 @@
 #define configUSE_TIMERS                           1
 #define configTIMER_TASK_PRIORITY                  ( configMAX_PRIORITIES - 2 )
 #define configTIMER_QUEUE_LENGTH                   10
-#define configTIMER_TASK_STACK_DEPTH               ( configMINIMAL_STACK_SIZE * 3 )
+#define configTIMER_TASK_STACK_DEPTH               ( configMINIMAL_STACK_SIZE * 2 )
 
 /* Run time stats gathering definitions. */
 /* FIX ME: Uncomment if you plan to use Tracealyzer.
